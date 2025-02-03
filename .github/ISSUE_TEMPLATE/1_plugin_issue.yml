@@ -33,6 +33,12 @@ body:
           required: true
         - label: "[I have checked the commit log of the master branch](https://github.com/streamlink/streamlink/commits/master)"
           required: true
+  - type: checkboxes
+    attributes:
+      label: Collaboration
+      options:
+        - label: "[I will provide feedback should a pull request be opened with a fix for the plugin](https://github.com/streamlink/streamlink/blob/master/CONTRIBUTING.md#pull-request-feedback)"
+          required: true
   - type: input
     attributes:
       label: Streamlink version
@@ -53,6 +59,7 @@ body:
       description: |
         Explain the plugin issue as thoroughly as you can.
         Please also provide the exact steps for reproducing the issue, e.g. a list of input URLs.
+        To exclude issues on the streaming website/service itself, all input URLs must be working fine in your web browser.
 
         Remember that it is impossible for the developers and maintainers of this project to be aware of specific details of every site/plugin.
     validations:
@@ -86,8 +93,6 @@ body:
         - [ ] properly filled in the title of this plugin issue (at the very top of this page)
         - [ ] checked the rendered text previews to avoid unnecessary formatting errors
 
-        Please [don't forget to provide feedback](https://github.com/streamlink/streamlink/blob/master/CONTRIBUTING.md#pull-request-feedback) once a pull request gets submitted for fixing the plugin issue.
-
         ----
 
-        [❤️ Love Streamlink? Please consider supporting the project maintainers. Thanks! ❤️](https://streamlink.github.io/latest/donate.html)
+        [❤️ Love Streamlink? Please consider supporting the project maintainers. Thanks! ❤️](https://streamlink.github.io/latest/support.html)

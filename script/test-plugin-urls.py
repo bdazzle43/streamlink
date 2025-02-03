@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
+from __future__ import annotations
+
 import argparse
 import importlib
 import logging
 import re
 import sys
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator, List, Optional, Set, Tuple, Type
 
 from streamlink import Streamlink
 from streamlink.logger import basicConfig
@@ -64,6 +66,12 @@ def parse_arguments() -> argparse.Namespace:
         metavar=("STRING", "REPLACEMENT"),
         help="Replace specific URL parts, e.g. channel names or IDs. Can be set multiple times",
     )
+    parser.add_argument(
+        "-m",
+        "--metadata",
+        action="store_true",
+        help="Show plugin metadata for each input URL",
+    )
 
     return parser.parse_args()
 
@@ -95,14 +103,15 @@ class PluginUrlTester:
         self.pluginname: str = args.plugin.lower()
 
         self.dry_run: bool = args.dry_run
+        self.log_metadata: bool = args.metadata
 
         self.loglevel: str = str(args.loglevel).upper()
         self.logcolor: str = args.color
         self.logger: logging.Logger = self._get_logger()
 
-        self.ignorelist: List[str] = args.ignore or []
-        self.replacelist: List[Tuple[str, str]] = args.replace or []
-        self.urls: Set[str] = set()
+        self.ignorelist: list[str] = args.ignore or []
+        self.replacelist: list[tuple[str, str]] = args.replace or []
+        self.urls: set[str] = set()
 
     def _get_logger(self) -> logging.Logger:
         logger = logging.getLogger(__name__)
@@ -127,7 +136,7 @@ class PluginUrlTester:
         url: str = item[1] if isinstance(item, tuple) else item
         if not any(re.search(ignore, url) for ignore in self.ignorelist):
             for string, replacement in self.replacelist:
-                url = url.replace(string, replacement)
+                url = re.sub(rf"\b{re.escape(string)}\b", replacement, url)
             self.urls.add(url)
 
     def iter_urls(self) -> Iterator[TUrlOrNamedUrl]:
@@ -139,7 +148,7 @@ class PluginUrlTester:
         except Exception as err:
             raise ImportError(f"Could not load test module of plugin {self.pluginname}: {err}") from err
 
-        PluginCanHandleUrlSubclass: Optional[Type[PluginCanHandleUrl]] = next(
+        PluginCanHandleUrlSubclass: type[PluginCanHandleUrl] | None = next(
             (
                 item
                 for item in module.__dict__.values()
@@ -155,7 +164,7 @@ class PluginUrlTester:
     def run(self) -> int:
         code = 0
         for url in sorted(self.urls):
-            self.logger.info(f"Finding streams for URL: {url}")
+            self.logger.info(url)
 
             session = Streamlink(plugins_builtin=True)
             # noinspection PyBroadException
@@ -183,8 +192,12 @@ class PluginUrlTester:
             if not streams:
                 self.logger.error("No streams found")
                 code = 1
-            else:
-                self.logger.info(f"Found streams: {', '.join(streams.keys())}")
+                continue
+
+            self.logger.info(f" {', '.join(streams.keys())}")
+
+            if self.log_metadata:
+                self.logger.info(f"  {plugininst.get_metadata()!r}")
 
         return code
 

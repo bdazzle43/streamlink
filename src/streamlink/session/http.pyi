@@ -1,5 +1,6 @@
+import ssl
 from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
-from typing import Any, Union
+from typing import Any
 
 # noinspection PyUnresolvedReferences
 from _typeshed import SupportsItems, SupportsRead  # noqa: PLC2701
@@ -34,8 +35,8 @@ _Data: TypeAlias = (
     | tuple[tuple[Any, Any], ...]
     | Mapping[Any, Any]
 )
-_Auth: TypeAlias = Union[tuple[str, str], AuthBase, Callable[[PreparedRequest], PreparedRequest]]
-_Cert: TypeAlias = Union[str, tuple[str, str]]
+_Auth: TypeAlias = tuple[str, str] | AuthBase | Callable[[PreparedRequest], PreparedRequest]
+_Cert: TypeAlias = str | tuple[str, str]
 _FileName: TypeAlias = str | None
 _FileContent: TypeAlias = SupportsRead[str | bytes] | str | bytes
 _FileContentType: TypeAlias = str
@@ -50,15 +51,16 @@ _HooksInput: TypeAlias = Mapping[str, Iterable[_Hook] | _Hook]
 
 _ParamsMappingKeyType: TypeAlias = str | bytes | float
 _ParamsMappingValueType: TypeAlias = str | bytes | float | Iterable[str | bytes | float] | None
-_Params: TypeAlias = Union[
-    SupportsItems[_ParamsMappingKeyType, _ParamsMappingValueType],
-    tuple[_ParamsMappingKeyType, _ParamsMappingValueType],
-    Iterable[tuple[_ParamsMappingKeyType, _ParamsMappingValueType]],
-    str | bytes,
-]
+_Params: TypeAlias = (
+    SupportsItems[_ParamsMappingKeyType, _ParamsMappingValueType]
+    | tuple[_ParamsMappingKeyType, _ParamsMappingValueType]
+    | Iterable[tuple[_ParamsMappingKeyType, _ParamsMappingValueType]]
+    | str
+    | bytes
+)
 _TextMapping: TypeAlias = MutableMapping[str, str]
 _HeadersUpdateMapping: TypeAlias = Mapping[str, str | bytes | None]
-_Timeout: TypeAlias = Union[float, tuple[float, float], tuple[float, None]]
+_Timeout: TypeAlias = float | tuple[float, float] | tuple[float, None]
 _Verify: TypeAlias = bool | str
 
 # END: borrowed from typeshed / types-requests
@@ -68,20 +70,18 @@ _Exception: TypeAlias = type[Exception]
 
 # ----
 
-class TLSNoDHAdapter(HTTPAdapter):
-    ...
+class SSLContextAdapter(HTTPAdapter):
+    def get_ssl_context(self) -> ssl.SSLContext: ...
 
-class TLSSecLevel1Adapter(HTTPAdapter):
-    ...
+class TLSNoDHAdapter(SSLContextAdapter): ...
+class TLSSecLevel1Adapter(SSLContextAdapter): ...
 
 class HTTPSession(Session):
     params: dict
     timeout: float
 
     @classmethod
-    def determine_json_encoding(cls, sample: bytes) -> str:
-        ...
-
+    def determine_json_encoding(cls, sample: bytes) -> str: ...
     @classmethod
     def json(
         cls,
@@ -91,9 +91,7 @@ class HTTPSession(Session):
         schema: Schema | None = ...,
         *args,
         **kwargs,
-    ) -> Any:
-        ...
-
+    ) -> Any: ...
     @classmethod
     def xml(
         cls,
@@ -105,19 +103,11 @@ class HTTPSession(Session):
         schema: Schema | None = ...,
         *args,
         **kwargs,
-    ) -> Any:
-        ...
-
-    def resolve_url(self, url: str) -> str:
-        ...
-
+    ) -> Any: ...
+    def resolve_url(self, url: str) -> str: ...
     @staticmethod
-    def valid_request_args(**req_keywords) -> dict[str, Any]:
-        ...
-
-    def prepare_new_request(self, **req_keywords) -> PreparedRequest:
-        ...
-
+    def valid_request_args(**req_keywords) -> dict[str, Any]: ...
+    def prepare_new_request(self, **req_keywords) -> PreparedRequest: ...
     def request(
         self,
         method: str | bytes,
@@ -136,7 +126,7 @@ class HTTPSession(Session):
         verify: _Verify | None = ...,
         cert: _Cert | None = ...,
         json: Any | None = ...,
-
+        # Streamlink stuff
         acceptable_status: _AcceptableStatus | None = ...,
         exception: _Exception | None = ...,
         raise_for_status: bool | None = ...,
@@ -145,9 +135,7 @@ class HTTPSession(Session):
         retries: float | None = ...,
         retry_backoff: float | None = ...,
         retry_max_backoff: float | None = ...,
-    ) -> Any:
-        ...
-
+    ) -> Any: ...
     def get(
         self,
         url: str | bytes,
@@ -166,7 +154,7 @@ class HTTPSession(Session):
         verify: _Verify | None = ...,
         cert: _Cert | None = ...,
         json: Any | None = ...,
-
+        # Streamlink stuff
         acceptable_status: _AcceptableStatus | None = ...,
         exception: _Exception | None = ...,
         raise_for_status: bool | None = ...,
@@ -175,9 +163,7 @@ class HTTPSession(Session):
         retries: float | None = ...,
         retry_backoff: float | None = ...,
         retry_max_backoff: float | None = ...,
-    ) -> Any:
-        ...
-
+    ) -> Any: ...
     def options(
         self,
         url: str | bytes,
@@ -196,7 +182,7 @@ class HTTPSession(Session):
         verify: _Verify | None = ...,
         cert: _Cert | None = ...,
         json: Any | None = ...,
-
+        # Streamlink stuff
         acceptable_status: _AcceptableStatus | None = ...,
         exception: _Exception | None = ...,
         raise_for_status: bool | None = ...,
@@ -205,9 +191,7 @@ class HTTPSession(Session):
         retries: float | None = ...,
         retry_backoff: float | None = ...,
         retry_max_backoff: float | None = ...,
-    ) -> Any:
-        ...
-
+    ) -> Any: ...
     def head(
         self,
         url: str | bytes,
@@ -226,7 +210,7 @@ class HTTPSession(Session):
         verify: _Verify | None = ...,
         cert: _Cert | None = ...,
         json: Any | None = ...,
-
+        # Streamlink stuff
         acceptable_status: _AcceptableStatus | None = ...,
         exception: _Exception | None = ...,
         raise_for_status: bool | None = ...,
@@ -235,9 +219,7 @@ class HTTPSession(Session):
         retries: float | None = ...,
         retry_backoff: float | None = ...,
         retry_max_backoff: float | None = ...,
-    ) -> Any:
-        ...
-
+    ) -> Any: ...
     def post(
         self,
         url: str | bytes,
@@ -256,7 +238,7 @@ class HTTPSession(Session):
         stream: bool | None = ...,
         verify: _Verify | None = ...,
         cert: _Cert | None = ...,
-
+        # Streamlink stuff
         acceptable_status: _AcceptableStatus | None = ...,
         exception: _Exception | None = ...,
         raise_for_status: bool | None = ...,
@@ -265,9 +247,7 @@ class HTTPSession(Session):
         retries: float | None = ...,
         retry_backoff: float | None = ...,
         retry_max_backoff: float | None = ...,
-    ) -> Any:
-        ...
-
+    ) -> Any: ...
     def put(
         self,
         url: str | bytes,
@@ -286,7 +266,7 @@ class HTTPSession(Session):
         verify: _Verify | None = ...,
         cert: _Cert | None = ...,
         json: Any | None = ...,
-
+        # Streamlink stuff
         acceptable_status: _AcceptableStatus | None = ...,
         exception: _Exception | None = ...,
         raise_for_status: bool | None = ...,
@@ -295,9 +275,7 @@ class HTTPSession(Session):
         retries: float | None = ...,
         retry_backoff: float | None = ...,
         retry_max_backoff: float | None = ...,
-    ) -> Any:
-        ...
-
+    ) -> Any: ...
     def patch(
         self,
         url: str | bytes,
@@ -316,7 +294,7 @@ class HTTPSession(Session):
         verify: _Verify | None = ...,
         cert: _Cert | None = ...,
         json: Any | None = ...,
-
+        # Streamlink stuff
         acceptable_status: _AcceptableStatus | None = ...,
         exception: _Exception | None = ...,
         raise_for_status: bool | None = ...,
@@ -325,9 +303,7 @@ class HTTPSession(Session):
         retries: float | None = ...,
         retry_backoff: float | None = ...,
         retry_max_backoff: float | None = ...,
-    ) -> Any:
-        ...
-
+    ) -> Any: ...
     def delete(
         self,
         url: str | bytes,
@@ -346,7 +322,7 @@ class HTTPSession(Session):
         verify: _Verify | None = ...,
         cert: _Cert | None = ...,
         json: Any | None = ...,
-
+        # Streamlink stuff
         acceptable_status: _AcceptableStatus | None = ...,
         exception: _Exception | None = ...,
         raise_for_status: bool | None = ...,
@@ -355,5 +331,4 @@ class HTTPSession(Session):
         retries: float | None = ...,
         retry_backoff: float | None = ...,
         retry_max_backoff: float | None = ...,
-    ) -> Any:
-        ...
+    ) -> Any: ...

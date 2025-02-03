@@ -42,7 +42,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Streamlink'
-copyright = '2024, Streamlink'
+copyright = '2025, Streamlink'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -220,9 +220,7 @@ htmlhelp_basename = 'streamlinkdoc'
 # -- Options for manual page output --------------------------------------------
 
 # Only include the man page in builds with the "man" tag set: via `-t man` (see Makefile)
-
-# noinspection PyUnresolvedReferences
-if not tags.tags.get("man"):  # type: ignore[name-defined]
+if "man" not in tags:  # type: ignore[name-defined]
     exclude_patterns.append("_man.rst")
 
 # One entry per manual page. List of tuples

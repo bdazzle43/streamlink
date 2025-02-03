@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import logging
 import sys
 import warnings
+from collections.abc import Iterator
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
+from os import devnull
 from pathlib import Path
 from sys import version_info
 from threading import Lock
-from typing import IO, TYPE_CHECKING, Iterator, List, Literal, Optional, Union
+from typing import IO, TYPE_CHECKING, Literal
 
 # noinspection PyProtectedMember
 from warnings import WarningMessage
@@ -14,7 +18,7 @@ from streamlink.exceptions import StreamlinkWarning
 from streamlink.utils.times import fromlocaltimestamp
 
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     _BaseLoggerClass = logging.Logger
 else:
     _BaseLoggerClass = logging.getLoggerClass()
@@ -68,12 +72,15 @@ def _logmethodfactory(level: int, name: str):
     # fix module name that gets read from the call stack in the logging module
     # https://github.com/python/cpython/commit/5ca6d7469be53960843df39bb900e9c3359f127f
     if version_info >= (3, 11):
+
         def method(self, message, *args, **kws):
             if self.isEnabledFor(level):
                 # increase the stacklevel by one and skip the `trace()` call here
                 kws["stacklevel"] = 2
                 self._log(level, message, args, **kws)
+
     else:
+
         def method(self, message, *args, **kws):
             if self.isEnabledFor(level):
                 self._log(level, message, args, **kws)
@@ -94,14 +101,14 @@ _config_lock = Lock()
 
 
 class StringFormatter(logging.Formatter):
-    def __init__(self, fmt, datefmt=None, style="%", remove_base=None):
-        if style not in ("{", "%"):
-            raise ValueError("Only {} and % formatting styles are supported")
-        super().__init__(fmt, datefmt=datefmt, style=style)
-        self.style = style
-        self.fmt = fmt
-        self.remove_base = remove_base or []
-        self._usesTime = (style == "%" and "%(asctime)" in fmt) or (style == "{" and "{asctime}" in fmt)
+    def __init__(self, *args, remove_base: list[str] | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._remove_base = remove_base or []
+        self._usesTime = super().usesTime()
+
+        # Validate the format's fields
+        rec = logging.LogRecord("", 1, "", 1, "", None, None)
+        super().format(rec)
 
     def usesTime(self):
         return self._usesTime
@@ -111,18 +118,38 @@ class StringFormatter(logging.Formatter):
 
         return tdt.strftime(datefmt or self.default_time_format)
 
-    def formatMessage(self, record):
-        if self.style == "{":
-            return self.fmt.format(**record.__dict__)
-        else:
-            return self.fmt % record.__dict__
-
     def format(self, record):
-        for rbase in self.remove_base:
+        for rbase in self._remove_base:
             record.name = record.name.replace(f"{rbase}.", "")
         record.levelname = record.levelname.lower()
 
         return super().format(record)
+
+
+class StreamHandler(logging.StreamHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._stream_reconfigure()
+
+    def flush(self):
+        try:
+            super().flush()
+        except OSError:
+            # Python doesn't raise BrokenPipeError on Windows
+            pass
+
+    def setStream(self, stream):
+        res = super().setStream(stream)
+        if res:  # pragma: no branch
+            self._stream_reconfigure()
+
+        return res
+
+    def _stream_reconfigure(self):
+        if not self.stream:
+            return
+        # make stream write calls escape unsupported characters (stdout/stderr encoding is not guaranteed to be utf-8)
+        self.stream.reconfigure(errors="backslashreplace")
 
 
 class WarningLogRecord(logging.LogRecord):
@@ -161,8 +188,7 @@ def _showwarning(message, category, filename, lineno, file=None, line=None):
         return
 
     warning = WarningMessage(message, category, filename, lineno, None, line)
-    kwargs = {"stacklevel": 2} if sys.version_info >= (3, 8) else {}
-    root.log(WARNING, warning, **kwargs)
+    root.log(WARNING, warning, stacklevel=2)
 
 
 def capturewarnings(capture=False):
@@ -180,14 +206,15 @@ def capturewarnings(capture=False):
 
 # noinspection PyShadowingBuiltins,PyPep8Naming
 def basicConfig(
-    filename: Optional[Union[str, Path]] = None,
+    *,
+    filename: str | Path | None = None,
     filemode: str = "a",
-    stream: Optional[IO] = None,
-    level: Optional[str] = None,
-    format: str = FORMAT_BASE,  # noqa: A002  # TODO: rename to "fmt" (breaking)
-    style: Literal["%", "{", "$"] = FORMAT_STYLE,
+    format: str = FORMAT_BASE,  # noqa: A002
     datefmt: str = FORMAT_DATE,
-    remove_base: Optional[List[str]] = None,
+    style: Literal["%", "{", "$"] = FORMAT_STYLE,
+    level: str | None = None,
+    stream: IO | None = None,
+    remove_base: list[str] | None = None,
     capture_warnings: bool = False,
 ) -> logging.StreamHandler:
     with _config_lock:
@@ -195,12 +222,15 @@ def basicConfig(
         if filename is not None:
             handler = logging.FileHandler(filename, filemode, encoding="utf-8")
         else:
-            handler = logging.StreamHandler(stream)
+            handler = StreamHandler(stream)
+            # logging.StreamHandler internally falls back to sys.stderr if stream is None
+            # sys.stderr however can also be None if fd2 doesn't exist, so use a devnull FileHandler in this case instead
+            if not handler.stream:
+                handler = logging.FileHandler(devnull)
 
-        # noinspection PyTypeChecker
         formatter = StringFormatter(
-            format,
-            datefmt,
+            fmt=format,
+            datefmt=datefmt,
             style=style,
             remove_base=remove_base or REMOVE_BASE,
         )
