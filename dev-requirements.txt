@@ -4,21 +4,21 @@ setuptools >=64.0.0  # required for being able to run editable installs
 versioningit >=2.0.0,<4  # required for being able to run editable installs
 
 # tests
-pytest >=6.0.0
-pytest-asyncio
+pytest >=8.0.0
 pytest-trio
 requests-mock
-freezegun >=1.0.0
+freezegun >=1.5.0
 
 # code-coverage
 pytest-cov
 coverage[toml]
 
-# code-linting
-ruff ==0.3.2
+# code-linting / code-formatting
+ruff ==0.9.7
 
 # typing
-mypy ==1.8.0
+mypy[faster-cache] ==1.15.0
+typing-extensions >=4.0.0
 lxml-stubs
 trio-typing
 types-freezegun
